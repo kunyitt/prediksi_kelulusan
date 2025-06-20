@@ -1,113 +1,146 @@
 import streamlit as st
 import pandas as pd
 import joblib
-from sklearn.preprocessing import LabelEncoder
+import numpy as np
 
 # Konfigurasi tampilan
 st.set_page_config(page_title="Prediksi Kelulusan Mahasiswa", layout="centered")
 
 # Judul Aplikasi
-st.markdown("# Prediksi Kelulusan Mahasiswa")
-st.markdown("Masukkan data mahasiswa untuk memprediksi apakah akan **Tepat** atau **Terlambat** lulus.")
+st.title("🎓 Prediksi Kelulusan Mahasiswa")
+st.write("Masukkan data mahasiswa untuk memprediksi status kelulusan")
 
-# Load Model dan Encoder
+# 1. Load Model dengan pengecekan fitur
 @st.cache_resource
-def load_artifacts():
+def load_model():
     try:
         model = joblib.load('prediksi_kelulusan.joblib')
-        encoders = joblib.load('encoders.joblib')
-        return model, encoders
+        
+        # Dapatkan nama fitur yang digunakan saat training
+        if hasattr(model, 'feature_names_in_'):
+            feature_names = model.feature_names_in_.tolist()
+        else:
+            # Jika model tidak menyimpan nama fitur, gunakan default
+            feature_names = [
+                'JENIS KELAMIN', 'STATUS MAHASISWA', 'STATUS NIKAH',
+                'IPK', 'IPS_1', 'IPS_2', 'IPS_3', 'IPS_4',
+                'IPS_5', 'IPS_6', 'IPS_7', 'IPS_8'
+            ]
+        
+        return model, feature_names
     except Exception as e:
-        st.error(f"Error loading model: {str(e)}")
+        st.error(f"Gagal memuat model: {str(e)}")
         return None, None
 
-model, encoders = load_artifacts()
+model, feature_names = load_model()
 
-if model is None or encoders is None:
+if model is None:
     st.stop()
 
-# Input Data
+# 2. Input Data - Pastikan sesuai dengan feature_names
 with st.form("input_form"):
-    st.markdown("---")
+    st.header("Data Mahasiswa")
     
+    # Mapping nilai untuk fitur kategorikal
+    st.subheader("Data Kategorikal")
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("### Jenis Kelamin")
         jenis_kelamin = st.radio(
-            "Pilih jenis kelamin",
-            ["LAKI-LAKI", "PEREMPUAN"],
-            index=0
+            "Jenis Kelamin",
+            [0, 1],
+            format_func=lambda x: "Laki-laki" if x == 0 else "Perempuan"
         )
         
-        st.markdown("### Status Mahasiswa")
         status_mahasiswa = st.radio(
-            "Pilih status",
-            ["BEKERJA", "TIDAK BEKERJA"],
-            index=0
+            "Status Mahasiswa",
+            [0, 1],
+            format_func=lambda x: "Aktif" if x == 0 else "Non-Aktif"
         )
-        
-        st.markdown("### Status Nikah")
-        status_nikah = st.radio(
-            "Pilih status",
-            ["BELUM MENIKAH", "MENIKAH"],
-            index=0
-        )
-        
-    with col2:
-        st.markdown("### Umur")
-        umur = st.number_input("Masukkan umur", min_value=17, max_value=50, value=22)
-        
-        st.markdown("### IP Semester")
-        ips_values = []
-        cols = st.columns(8)
-        for i in range(8):
-            with cols[i]:
-                ips = st.number_input(
-                    f"IPS.{i+1}",
-                    min_value=0.0,
-                    max_value=4.0,
-                    value=3.0,
-                    step=0.01,
-                    key=f"ips_{i}"
-                )
-                ips_values.append(ips)
-        
-        st.markdown("### IPK")
-        ipk = st.number_input("Masukkan IPK", min_value=0.0, max_value=4.0, value=3.0, step=0.01)
     
-    st.markdown("---")
-    submit_button = st.form_submit_button("PREDIKSI")
+    with col2:
+        status_nikah = st.radio(
+            "Status Nikah",
+            [0, 1],
+            format_func=lambda x: "Belum Menikah" if x == 0 else "Menikah"
+        )
+        
+        ipk = st.slider("IPK", 0.0, 4.0, 3.0, 0.01)
+    
+    # Input IPS per semester
+    st.subheader("IP Semester")
+    ips_cols = st.columns(8)
+    ips_values = []
+    for i in range(8):
+        with ips_cols[i]:
+            ips = st.number_input(
+                f"Sem {i+1}",
+                min_value=0.0,
+                max_value=4.0,
+                value=3.0,
+                step=0.01,
+                key=f"ips_{i}"
+            )
+            ips_values.append(ips)
+    
+    submitted = st.form_submit_button("Prediksi")
 
-if submit_button:
+# 3. Proses Prediksi dengan validasi fitur
+if submitted:
     try:
-        jk_encoded = encoders['JENIS KELAMIN'].transform([jenis_kelamin])[0]
-        status_m_encoded = encoders['STATUS MAHASISWA'].transform([status_mahasiswa])[0]
-        status_nikah_encoded = encoders['STATUS NIKAH'].transform([status_nikah])[0]
-
-        input_df = pd.DataFrame([[
-            jk_encoded,
-            status_m_encoded,
-            umur,
-            status_nikah_encoded,
-            *ips_values,
-            ipk
-        ]], columns=[
-            'JENIS KELAMIN', 'STATUS MAHASISWA', 'UMUR', 'STATUS NIKAH',
-            'IPS.1', 'IPS.2', 'IPS.3', 'IPS.4', 'IPS.5', 'IPS.6', 'IPS.7', 'IPS.8',
-            'IPK'
-        ])
-
-        prediction = model.predict(input_df)
-        prediction_proba = model.predict_proba(input_df)
-
-        st.markdown("## Hasil Prediksi")
-        if prediction[0] == 1:
-            st.success(f"### Prediksi: TEPAT LULUS (Probabilitas: {prediction_proba[0][1]*100:.2f}%)")
-        else:
-            st.error(f"### Prediksi: TERLAMBAT LULUS (Probabilitas: {prediction_proba[0][0]*100:.2f}%)")
-
+        # Membuat DataFrame dengan urutan fitur yang benar
+        input_data = {
+            'JENIS KELAMIN': [jenis_kelamin],
+            'STATUS MAHASISWA': [status_mahasiswa],
+            'STATUS NIKAH': [status_nikah],
+            'IPK': [ipk]
+        }
+        
+        # Tambahkan IPS ke input data
+        for i in range(8):
+            input_data[f'IPS_{i+1}'] = [ips_values[i]]
+        
+        # Buat DataFrame dengan urutan fitur yang sesuai training
+        df_input = pd.DataFrame(input_data)[feature_names]
+        
+        # Prediksi
+        prediction = model.predict(df_input)
+        proba = model.predict_proba(df_input)
+        
+        # Tampilkan hasil
+        st.success("### Hasil Prediksi")
+        
+        # Mapping hasil prediksi
+        result_mapping = {
+            0: ("Tidak Lulus", "🔴"),
+            1: ("Lulus", "🟢")
+        }
+        
+        pred_label, pred_icon = result_mapping[prediction[0]]
+        
+        st.metric(
+            label="Status Kelulusan",
+            value=f"{pred_icon} {pred_label}",
+            delta=f"Probabilitas: {proba[0][prediction[0]]*100:.2f}%"
+        )
+        
+        # Tampilkan detail probabilitas
+        st.write("**Detail Probabilitas:**")
+        proba_data = {
+            'Kelas': ['Tidak Lulus', 'Lulus'],
+            'Probabilitas': [proba[0][0], proba[0][1]]
+        }
+        st.bar_chart(pd.DataFrame(proba_data).set_index('Kelas'))
+        
     except Exception as e:
-        st.error(f"Terjadi error dalam pemrosesan: {str(e)}")
-        st.info("Pastikan semua input sesuai dengan format data training.")
+        st.error(f"Terjadi kesalahan: {str(e)}")
+        st.error("Pastikan semua input sesuai dengan data training")
+        st.write(f"Fitur yang dibutuhkan: {feature_names}")
 
+# Informasi Fitur
+st.sidebar.info(
+    "**Panduan Input:**\n"
+    "- Pastikan semua fitur diisi\n"
+    "- Gunakan format yang sesuai\n"
+    f"\n**Fitur yang dibutuhkan:**\n{feature_names}"
+)
