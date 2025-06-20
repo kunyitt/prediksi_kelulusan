@@ -57,15 +57,27 @@ if submit:
     fitur_model = [col.strip() for col in fitur_model]
     
     # Pastikan urutan dan nama kolom cocok dengan saat training
-    try:
-        df_input = df_input[fitur_model]
-    
-        # Gunakan .to_numpy() agar tidak error ValueError _check_feature_names
-        pred = model.predict(df_input.to_numpy())[0]
-        hasil = encoders['STATUS KELULUSAN'].inverse_transform([pred])[0]
-    
-        st.success(f"Hasil Prediksi: Mahasiswa diperkirakan akan **{hasil.upper()}**")
-    except KeyError as e:
-        st.error(f"Terjadi error karena kolom tidak cocok: {e}")
-        st.write("Kolom input saat ini:", df_input.columns.tolist())
-        st.write("Kolom yang dibutuhkan model:", fitur_model)
+   try:
+    df_input = df_input[fitur_model]
+
+    # Gunakan .to_numpy() agar aman dari error _check_feature_names
+    input_array = df_input.to_numpy()
+
+    # Prediksi label dan probabilitas
+    pred = model.predict(input_array)[0]
+    prob = model.predict_proba(input_array)[0]
+
+    # Ambil label hasil prediksi
+    hasil = encoders['STATUS KELULUSAN'].inverse_transform([pred])[0]
+
+    # Tampilkan hasil dan probabilitas
+    st.success(f"Hasil Prediksi: Mahasiswa diperkirakan akan **{hasil.upper()}**")
+    st.write("📊 Probabilitas:")
+    for i, label in enumerate(encoders['STATUS KELULUSAN'].classes_):
+        st.write(f"- {label}: {round(prob[i]*100, 2)}%")
+
+except KeyError as e:
+    st.error(f"Terjadi error karena kolom tidak cocok: {e}")
+    st.write("Kolom input saat ini:", df_input.columns.tolist())
+    st.write("Kolom yang dibutuhkan model:", fitur_model)
+
