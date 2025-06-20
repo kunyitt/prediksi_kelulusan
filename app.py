@@ -1,57 +1,88 @@
 import streamlit as st
 import pandas as pd
 import joblib
-
-# Load model & encoder
-model = joblib.load("prediksi_kelulusan.joblib")
-encoders = joblib.load("encoders.joblib")
-
-# Kolom input yang digunakan model
-input_columns = [
-    'JENIS KELAMIN', 'STATUS MAHASISWA', 'UMUR', 'STATUS NIKAH',
-    'IPS 1', 'IPS 2', 'IPS 3', 'IPS 4',
-    'IPS 5', 'IPS 6', 'IPS 7', 'IPS 8', 'IPK'
-]
+from sklearn.preprocessing import LabelEncoder
 
 # Judul Aplikasi
 st.title("🎓 Prediksi Kelulusan Mahasiswa")
-st.write("Masukkan data mahasiswa untuk memprediksi apakah akan **Tepat** atau **Terlambat** lulus.")
+st.write("Aplikasi ini memprediksi status kelulusan mahasiswa berdasarkan data input.")
 
-# Form input pengguna
-with st.form("form_kelulusan"):
-    jk = st.selectbox("Jenis Kelamin", encoders['JENIS KELAMIN'].classes_)
-    status_mhs = st.selectbox("Status Mahasiswa", encoders['STATUS MAHASISWA'].classes_)
-    status_nikah = st.selectbox("Status Nikah", encoders['STATUS NIKAH'].classes_)
-    umur = st.number_input("Umur", 17, 60, value=22)
+# Load Model dan Encoder
+@st.cache_resource  # Cache untuk mempercepat loading
+def load_model():
+    model = joblib.load('prediksi_kelulusan.joblib')
+    encoders = joblib.load('encoders.joblib')
+    return model, encoders
 
-    ips_values = [st.number_input(f"IPS {i}", 0.0, 4.0, 3.0) for i in range(1, 9)]
-    ipk = st.number_input("IPK", 0.0, 4.0, 3.0)
+model, encoders = load_model()
 
-    submit = st.form_submit_button("Prediksi")
+# Input Data
+st.sidebar.header("Input Data Mahasiswa")
 
-# Ketika tombol submit ditekan
-if submit:
-    try:
-        # Susun input dalam DataFrame
-        input_df = pd.DataFrame([[
-            encoders['JENIS KELAMIN'].transform([jk])[0],
-            encoders['STATUS MAHASISWA'].transform([status_mhs])[0],
-            umur,
-            encoders['STATUS NIKAH'].transform([status_nikah])[0],
-            *ips_values,
-            ipk
-        ]], columns=input_columns)
+# Fungsi untuk input user
+def user_input():
+    jenis_kelamin = st.sidebar.selectbox("Jenis Kelamin", ["Laki-laki", "Perempuan"])
+    status_mahasiswa = st.sidebar.selectbox("Status Mahasiswa", ["Aktif", "Non-Aktif"])
+    status_nikah = st.sidebar.selectbox("Status Nikah", ["Belum Menikah", "Menikah"])
+    ipk = st.sidebar.slider("IPK", 0.0, 4.0, 3.0)
+    lama_studi = st.sidebar.number_input("Lama Studi (Tahun)", min_value=1, max_value=10, value=4)
+    
+    data = {
+        'JENIS KELAMIN': jenis_kelamin,
+        'STATUS MAHASISWA': status_mahasiswa,
+        'STATUS NIKAH': status_nikah,
+        'IPK': ipk,
+        'LAMA STUDI': lama_studi
+    }
+    
+    return pd.DataFrame(data, index=[0])
 
-        # Prediksi
-        pred = model.predict(input_df)[0]
-        hasil = encoders['STATUS KELULUSAN'].inverse_transform([pred])[0]
+input_df = user_input()
 
-        # Tampilkan hasil
-        if hasil.upper() == "TERLAMBAT":
-            st.error(f"❌ Mahasiswa diprediksi LULUS {hasil.upper()}")
-        else:
-            st.success(f"✅ Mahasiswa diprediksi LULUS {hasil.upper()}")
+# Tampilkan Input
+st.subheader("Data Input")
+st.write(input_df)
 
-    except Exception as e:
-        st.error("Terjadi error saat memproses prediksi.")
-        st.exception(e)
+# Preprocessing
+def preprocess(data):
+    # Salin data
+    df = data.copy()
+    
+    # Label Encoding
+    df['JENIS KELAMIN'] = encoders['JENIS KELAMIN'].transform(df['JENIS KELAMIN'])
+    df['STATUS MAHASISWA'] = encoders['STATUS MAHASISWA'].transform(df['STATUS MAHASISWA'])
+    df['STATUS NIKAH'] = encoders['STATUS NIKAH'].transform(df['STATUS NIKAH'])
+    
+    return df
+
+# Prediksi
+if st.button("Prediksi Kelulusan"):
+    # Preprocess input
+    processed_df = preprocess(input_df)
+    
+    # Prediksi
+    prediction = model.predict(processed_df)
+    prediction_proba = model.predict_proba(processed_df)
+    
+    # Mapping hasil prediksi
+    status_map = {0: "Tidak Lulus", 1: "Lulus"}  # Sesuaikan dengan mapping LabelEncoder
+    
+    st.subheader("Hasil Prediksi")
+    st.write(f"Status Kelulusan: **{status_map[prediction[0]]}**")
+    
+    st.subheader("Probabilitas Prediksi")
+    st.write(f"Probabilitas Tidak Lulus: {prediction_proba[0][0]:.2f}")
+    st.write(f"Probabilitas Lulus: {prediction_proba[0][1]:.2f}")
+    
+    # Visualisasi
+    st.bar_chart({
+        "Tidak Lulus": prediction_proba[0][0],
+        "Lulus": prediction_proba[0][1]
+    })
+
+# Catatan
+st.sidebar.markdown("---")
+st.sidebar.info(
+    "Pastikan file `prediksi_kelulusan.joblib` dan `encoders.joblib` "
+    "berada di folder yang sama dengan script ini."
+)
