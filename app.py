@@ -1,153 +1,105 @@
 import streamlit as st
 import pandas as pd
 import joblib
+import numpy as np
 
-# Konfigurasi tampilan
 st.set_page_config(page_title="Prediksi Kelulusan Mahasiswa", layout="centered")
 
-# Judul Aplikasi
 st.title("🎓 Prediksi Kelulusan Mahasiswa")
-st.write("Masukkan data mahasiswa untuk memprediksi status kelulusan")
+st.write("Masukkan data mahasiswa untuk memprediksi status kelulusan.")
 
-# 1. Load Model
 @st.cache_resource
 def load_model():
     try:
         model = joblib.load('prediksi_kelulusan.joblib')
-        
-        # Dapatkan nama fitur dari model (termasuk yang ada spasi)
         if hasattr(model, 'feature_names_in_'):
-            required_features = [f.strip() for f in model.feature_names_in_.tolist()]  # Bersihkan spasi
+            feature_names = model.feature_names_in_.tolist()
         else:
-            required_features = [
-                'JENIS KELAMIN', 'STATUS MAHASISWA', 'UMUR', 'STATUS NIKAH',
+            feature_names = [
+                'JENIS KELAMIN', 'STATUS MAHASISWA', 'STATUS NIKAH',
+                'UMUR', 'IPK ',  # <- perhatikan spasi jika ada
                 'IPS 1', 'IPS 2', 'IPS 3', 'IPS 4',
-                'IPS 5', 'IPS 6', 'IPS 7', 'IPS 8',
-                'IPK '  # Tanpa spasi
+                'IPS 5', 'IPS 6', 'IPS 7', 'IPS 8'
             ]
-        
-        return model, required_features
+        return model, feature_names
     except Exception as e:
         st.error(f"Gagal memuat model: {str(e)}")
         return None, None
 
-model, required_features = load_model()
-
+model, feature_names = load_model()
 if model is None:
     st.stop()
 
-# 2. Input Data - Penyesuaian untuk 'IPK ' dengan spasi
-with st.form("input_form"):
+# --- Form Input ---
+with st.form("form_input"):
     st.header("Data Mahasiswa")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Data Identitas")
-        jenis_kelamin = st.radio(
-            "Jenis Kelamin",
-            options=[0, 1],
-            format_func=lambda x: "Laki-laki" if x == 0 else "Perempuan"
-        )
-        
-        umur = st.number_input("Umur", min_value=17, max_value=50, value=22)
-        
-        status_nikah = st.radio(
-            "Status Nikah",
-            options=[0, 1],
-            format_func=lambda x: "Belum Menikah" if x == 0 else "Menikah"
-        )
-    
-    with col2:
-        st.subheader("Status Akademik")
-        status_mahasiswa = st.radio(
-            "Status Mahasiswa",
-            options=[0, 1],
-            format_func=lambda x: "Bekerja" if x == 0 else "Tidak Bekerja"
-        )
-        
-        # Penyesuaian khusus untuk 'IPK ' dengan spasi
-        ipk = st.slider(
-            "IPK",  # Tampilan untuk user
-            min_value=0.0,
-            max_value=4.0,
-            value=3.0,
-            step=0.01
-        )
-    
-    st.subheader("IP Semester")
-    ips_cols = st.columns(8)
-    ips_values = []
-    for i in range(1, 9):
-        with ips_cols[i-1]:
-            ips = st.number_input(
-                f"IPS {i}",
-                min_value=0.0,
-                max_value=4.0,
-                value=3.0,
-                step=0.01,
-                key=f"ips_{i}"
-            )
-            ips_values.append(ips)
-    
-    submitted = st.form_submit_button("Prediksi")
 
-# 3. Proses Prediksi dengan penanganan spasi di 'IPK'
-if submitted:
+    col1, col2 = st.columns(2)
+    with col1:
+        jenis_kelamin = st.radio("Jenis Kelamin", [0, 1], format_func=lambda x: "Laki-laki" if x == 0 else "Perempuan")
+        status_mahasiswa = st.radio("Status Mahasiswa", [0, 1], format_func=lambda x: "Bekerja" if x == 0 else "Tidak Bekerja")
+    with col2:
+        status_nikah = st.radio("Status Nikah", [0, 1], format_func=lambda x: "Belum Menikah" if x == 0 else "Menikah")
+        umur = st.number_input("Umur", min_value=17, max_value=60, value=22)
+
+    st.subheader("IP Semester")
+    ips_values = []
+    ips_cols = st.columns(8)
+    for i in range(8):
+        with ips_cols[i]:
+            ips = st.number_input(f"IPS {i+1}", 0.0, 4.0, 3.0, 0.01, key=f"ips_{i}")
+            ips_values.append(ips)
+
+    # ✅ Hitung IPK otomatis dari IPS
+    ipk = round(np.mean(ips_values), 2)
+    st.info(f"🎓 IPK dihitung otomatis: {ipk}")
+
+    # ✅ Tombol submit ada di level indentasi ini
+    submit = st.form_submit_button("Prediksi")
+
+# --- Prediksi ---
+if submit:
     try:
-        # Membuat dictionary dengan nama kolom yang sesuai model (termasuk spasi di 'IPK ')
         input_data = {
             'JENIS KELAMIN': [jenis_kelamin],
             'STATUS MAHASISWA': [status_mahasiswa],
-            'UMUR': [umur],
             'STATUS NIKAH': [status_nikah],
-            'IPK ': [ipk]  # <- Perhatikan spasi di akhir!
+            'UMUR': [umur]
         }
-        
-        # Tambahkan IPS
-        for i in range(1, 9):
-            input_data[f'IPS {i}'] = [ips_values[i-1]]
-        
-        # Buat DataFrame dan pastikan urutan kolom sesuai
-        df_input = pd.DataFrame(input_data)[required_features]
-        
-        # Prediksi
-        prediction = model.predict(df_input)
-        prediction_proba = model.predict_proba(df_input)
-        
-        # Tampilkan hasil
-        st.success("### Hasil Prediksi")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric(
-                "Status Kelulusan",
-                "Tepat Lulus" if prediction[0] == 1 else "Terlambat Lulus"
-            )
-        with col2:
-            st.metric(
-                "Probabilitas",
-                f"{prediction_proba[0][prediction[0]]*100:.2f}%"
-            )
-        
-        # Visualisasi
-        st.bar_chart(pd.DataFrame({
-            'Status': ['Terlambat Lulus', 'Tepat Lulus'],
-            'Probabilitas': [prediction_proba[0][0], prediction_proba[0][1]]
-        }).set_index('Status'))
-        
-    except Exception as e:
-        st.error(f"Terjadi kesalahan: {str(e)}")
-        st.error("""
-        Pastikan:
-        1. Format nama kolom sama persis dengan training
-        2. Khusus untuk IPK, gunakan format dengan spasi di akhir
-        """)
 
-# Panduan di Sidebar
-st.sidebar.info("""
-**Catatan Penting:**
-1. Sistem mengharuskan penulisan 'IPK ' dengan spasi di akhir
-2. Format IPS: 'IPS 1' sampai 'IPS 8' (dengan spasi)
-3. Semua nilai harus diisi
-""")
+        # Sesuaikan nama IPK dengan model
+        if 'IPK ' in feature_names:
+            input_data['IPK '] = [ipk]  # <- pakai spasi
+        else:
+            input_data['IPK'] = [ipk]
+
+        # Tambahkan IPS
+        for i in range(8):
+            key_underscore = f'IPS_{i+1}'
+            key_space = f'IPS {i+1}'
+            if key_space in feature_names:
+                input_data[key_space] = [ips_values[i]]
+            elif key_underscore in feature_names:
+                input_data[key_underscore] = [ips_values[i]]
+
+        df_input = pd.DataFrame(input_data)[feature_names]
+
+        pred = model.predict(df_input)[0]
+        proba = model.predict_proba(df_input)
+
+        label_map = {0: "Terlambat Lulus", 1: "Tepat Lulus"}
+        icon_map = {0: "🔴", 1: "🟢"}
+
+        st.success(f"### Prediksi: {icon_map[pred]} {label_map[pred]}")
+        st.metric("Probabilitas", f"{proba[0][pred]*100:.2f}%")
+
+        # Grafik probabilitas
+        df_proba = pd.DataFrame({
+            "Status": ["Terlambat Lulus", "Tepat Lulus"],
+            "Probabilitas": [proba[0][0], proba[0][1]]
+        }).set_index("Status")
+        st.bar_chart(df_proba)
+
+    except Exception as e:
+        st.error(f"❌ Terjadi kesalahan saat prediksi:\n{str(e)}")
+        st.info(f"Fitur yang diperlukan:\n{feature_names}")
