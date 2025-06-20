@@ -51,19 +51,19 @@ if submit:
 
     # Buat DataFrame dari input
     df_input = pd.DataFrame([input_data])
-
+    
     # Bersihkan spasi pada nama kolom input & fitur_model
     df_input.columns = df_input.columns.str.strip()
     fitur_model = [col.strip() for col in fitur_model]
-
+    
     # Pastikan urutan dan nama kolom cocok dengan saat training
     try:
         df_input = df_input[fitur_model]
-
-        # Prediksi
-        pred = model.predict(df_input)[0]
+    
+        # Gunakan .to_numpy() agar tidak error ValueError _check_feature_names
+        pred = model.predict(df_input.to_numpy())[0]
         hasil = encoders['STATUS KELULUSAN'].inverse_transform([pred])[0]
-
+    
         st.success(f"Hasil Prediksi: Mahasiswa diperkirakan akan **{hasil.upper()}**")
     except KeyError as e:
         st.error(f"Terjadi error karena kolom tidak cocok: {e}")
