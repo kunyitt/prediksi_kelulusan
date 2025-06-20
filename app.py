@@ -56,3 +56,6 @@ if submit:
     label_prediksi = encoders['STATUS KELULUSAN'].inverse_transform([pred])[0]
 
     st.success(f"Hasil Prediksi: Mahasiswa diperkirakan akan **{label_prediksi.upper()}**")
+
+print("Input cols:", df_input.columns.tolist())
+print("Expected cols:", model.feature_names_in_.tolist())
