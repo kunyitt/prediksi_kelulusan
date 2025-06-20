@@ -32,19 +32,19 @@ with st.form("form_prediksi"):
 if submit:
     # Encode input kategorikal
     input_data = {
-        'JENIS KELAMIN': encoders['JENIS KELAMIN'].transform([jenis_kelamin])[0],
-        'STATUS MAHASISWA': encoders['STATUS MAHASISWA'].transform([status_mahasiswa])[0],
-        'STATUS NIKAH': encoders['STATUS NIKAH'].transform([status_nikah])[0],
-        'IPS 1': ips1,
-        'IPS 2': ips2,
-        'IPS 3': ips3,
-        'IPS 4': ips4,
-        'IPS 5': ips5,
-        'IPS 6': ips6,
-        'IPS 7': ips7,
-        'IPS 8': ips8,
-        'IPK': ipk
-    }
+    'JENIS_KELAMIN': encoders['JENIS KELAMIN'].transform([jenis_kelamin])[0],
+    'STATUS_MAHASISWA': encoders['STATUS MAHASISWA'].transform([status_mahasiswa])[0],
+    'STATUS_NIKAH': encoders['STATUS NIKAH'].transform([status_nikah])[0],
+    'IPS_1': ips1,
+    'IPS_2': ips2,
+    'IPS_3': ips3,
+    'IPS_4': ips4,
+    'IPS_5': ips5,
+    'IPS_6': ips6,
+    'IPS_7': ips7,
+    'IPS_8': ips8,
+    'IPK': ipk
+}
 
     df_input = pd.DataFrame([input_data])
     
