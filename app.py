@@ -81,49 +81,33 @@ with st.form("input_form"):
 
 if submit_button:
     try:
-        # Mapping nilai input ke format yang sesuai dengan training data
-        input_mapping = {
-            'JENIS KELAMIN': jenis_kelamin.lower(),
-            'STATUS MAHASISWA': status_mahasiswa.lower(),
-            'STATUS NIKAH': status_nikah.lower(),
-            'UMUR': umur,
-            'IPK': ipk,
-            **{f'IPS.{i+1}': ips_values[i] for i in range(8)}
-        }
-        
-        # Convert ke DataFrame
-        input_df = pd.DataFrame([input_mapping])
-        
-        # Transformasi data
-        for col in encoders:
-            if col in input_df.columns:
-                # Pastikan nilai ada dalam kelas encoder
-                unique_values = set(input_df[col].unique())
-                valid_values = set(encoders[col].classes_)
-                
-                if not unique_values.issubset(valid_values):
-                    invalid_values = unique_values - valid_values
-                    raise ValueError(
-                        f"Nilai {invalid_values} tidak valid untuk kolom {col}. "
-                        f"Nilai yang valid: {list(valid_values)}"
-                    )
-                
-                input_df[col] = encoders[col].transform(input_df[col])
-        
-        # Prediksi
+        jk_encoded = encoders['JENIS KELAMIN'].transform([jenis_kelamin])[0]
+        status_m_encoded = encoders['STATUS MAHASISWA'].transform([status_mahasiswa])[0]
+        status_nikah_encoded = encoders['STATUS NIKAH'].transform([status_nikah])[0]
+
+        input_df = pd.DataFrame([[
+            jk_encoded,
+            status_m_encoded,
+            umur,
+            status_nikah_encoded,
+            *ips_values,
+            ipk
+        ]], columns=[
+            'JENIS KELAMIN', 'STATUS MAHASISWA', 'UMUR', 'STATUS NIKAH',
+            'IPS.1', 'IPS.2', 'IPS.3', 'IPS.4', 'IPS.5', 'IPS.6', 'IPS.7', 'IPS.8',
+            'IPK'
+        ])
+
         prediction = model.predict(input_df)
         prediction_proba = model.predict_proba(input_df)
-        
-        # Tampilkan hasil
+
         st.markdown("## Hasil Prediksi")
-        
-        # Pastikan mapping prediksi sesuai dengan model
-        # (0 = Terlambat, 1 = Tepat) - sesuaikan dengan model Anda
         if prediction[0] == 1:
             st.success(f"### Prediksi: TEPAT LULUS (Probabilitas: {prediction_proba[0][1]*100:.2f}%)")
         else:
             st.error(f"### Prediksi: TERLAMBAT LULUS (Probabilitas: {prediction_proba[0][0]*100:.2f}%)")
-            
+
     except Exception as e:
         st.error(f"Terjadi error dalam pemrosesan: {str(e)}")
-        st.info("Pastikan semua input sesuai dengan format data training")
+        st.info("Pastikan semua input sesuai dengan format data training.")
+
