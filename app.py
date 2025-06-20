@@ -37,7 +37,7 @@ with st.form("form_input"):
     col1, col2 = st.columns(2)
     with col1:
         jenis_kelamin = st.radio("Jenis Kelamin", [0, 1], format_func=lambda x: "Laki-laki" if x == 0 else "Perempuan")
-        status_mahasiswa = st.radio("Status Mahasiswa", [0, 1], format_func=lambda x: "Aktif" if x == 0 else "Non-Aktif")
+        status_mahasiswa = st.radio("Status Mahasiswa", [0, 1], format_func=lambda x: "Bekerja" if x == 0 else "Tidak Bekerja")
     with col2:
         status_nikah = st.radio("Status Nikah", [0, 1], format_func=lambda x: "Belum Menikah" if x == 0 else "Menikah")
         umur = st.number_input("Umur", min_value=17, max_value=60, value=22)
