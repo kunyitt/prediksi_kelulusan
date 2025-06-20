@@ -1,19 +1,17 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import joblib
 
-# Load model dan encoders
+# Load model & encoder
 model = joblib.load("prediksi_kelulusan.pkl")
 encoders = joblib.load("encoders.pkl")
 
-# Kolom input model (manual, hindari error feature_names_in_)
+# Kolom input harus sama persis dengan saat training
 input_columns = [
     'JENIS KELAMIN', 'STATUS MAHASISWA', 'UMUR', 'STATUS NIKAH',
     'IPS 1', 'IPS 2', 'IPS 3', 'IPS 4', 'IPS 5', 'IPS 6', 'IPS 7', 'IPS 8', 'IPK'
 ]
 
-# UI
 st.title("🎓 Prediksi Kelulusan Mahasiswa")
 
 with st.form("form_kelulusan"):
@@ -28,19 +26,28 @@ with st.form("form_kelulusan"):
     submit = st.form_submit_button("Prediksi")
 
 if submit:
-    input_df = pd.DataFrame([[
-        encoders['JENIS KELAMIN'].transform([jk])[0],
-        encoders['STATUS MAHASISWA'].transform([status_mhs])[0],
-        umur,
-        encoders['STATUS NIKAH'].transform([status_nikah])[0],
-        *ips_values,
-        ipk
-    ]], columns=input_columns)
+    try:
+        input_df = pd.DataFrame([[
+            encoders['JENIS KELAMIN'].transform([jk])[0],
+            encoders['STATUS MAHASISWA'].transform([status_mhs])[0],
+            umur,
+            encoders['STATUS NIKAH'].transform([status_nikah])[0],
+            *ips_values,
+            ipk
+        ]], columns=input_columns)
 
-    pred = model.predict(input_df)[0]
-    hasil = encoders['STATUS KELULUSAN'].inverse_transform([pred])[0]
+        # Debug
+        st.write("🧪 Shape input:", input_df.shape)
+        st.write("🧪 Kolom input:", input_df.columns.tolist())
 
-    if hasil.upper() == "TERLAMBAT":
-        st.error(f"❌ Mahasiswa diprediksi LULUS {hasil.upper()}")
-    else:
-        st.success(f"✅ Mahasiswa diprediksi LULUS {hasil.upper()}")
+        pred = model.predict(input_df)[0]
+        hasil = encoders['STATUS KELULUSAN'].inverse_transform([pred])[0]
+
+        if hasil.upper() == "TERLAMBAT":
+            st.error(f"❌ Mahasiswa diprediksi LULUS {hasil.upper()}")
+        else:
+            st.success(f"✅ Mahasiswa diprediksi LULUS {hasil.upper()}")
+
+    except Exception as e:
+        st.error("Terjadi error saat prediksi.")
+        st.exception(e)
