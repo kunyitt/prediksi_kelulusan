@@ -1,59 +1,59 @@
 import streamlit as st
 import pandas as pd
-import joblib
 import numpy as np
+import joblib
 
-# Load model dan encoders
+# Load model, encoder, dan urutan kolom fitur
 model = joblib.load('model_kelulusan.pkl')
 encoders = joblib.load('encoders.pkl')
+fitur_model = joblib.load('fitur_model.pkl')  # urutan kolom saat training
 
-st.title("Prediksi Kelulusan Mahasiswa")
+st.title("🎓 Prediksi Kelulusan Mahasiswa")
 
 with st.form("form_prediksi"):
-    # Input kategorikal
+    # Input fitur kategorikal
     jenis_kelamin = st.selectbox("Jenis Kelamin", encoders['JENIS KELAMIN'].classes_)
     status_mahasiswa = st.selectbox("Status Mahasiswa", encoders['STATUS MAHASISWA'].classes_)
-    status_nikah = st.selectbox("Status Nikah", encoders['STATUS NIKAH'].classes_)
+    status_nikah = st.selectbox("Status Nikikah", encoders['STATUS NIKAH'].classes_)
 
     # Input umur
     umur = st.number_input("Umur", min_value=15, max_value=100)
 
-    # Input IPS 1 - 8
-    ips1 = st.number_input("IPS 1", min_value=0.0, max_value=4.0, step=0.01)
-    ips2 = st.number_input("IPS 2", min_value=0.0, max_value=4.0, step=0.01)
-    ips3 = st.number_input("IPS 3", min_value=0.0, max_value=4.0, step=0.01)
-    ips4 = st.number_input("IPS 4", min_value=0.0, max_value=4.0, step=0.01)
-    ips5 = st.number_input("IPS 5", min_value=0.0, max_value=4.0, step=0.01)
-    ips6 = st.number_input("IPS 6", min_value=0.0, max_value=4.0, step=0.01)
-    ips7 = st.number_input("IPS 7", min_value=0.0, max_value=4.0, step=0.01)
-    ips8 = st.number_input("IPS 8", min_value=0.0, max_value=4.0, step=0.01)
-    
-    # Hitung IPK dari IPS 1-8
-    ipk = round(np.mean([ips1, ips2, ips3, ips4, ips5, ips6, ips7, ips8]), 2)
-    st.info(f"IPK secara otomatis dihitung: {ipk}")
+    # Input IPS 1-8
+    ips = []
+    for i in range(1, 9):
+        ips_val = st.number_input(f"IPS {i}", min_value=0.0, max_value=4.0, step=0.01)
+        ips.append(ips_val)
+
+    # IPK otomatis dari rata-rata IPS
+    ipk = round(np.mean(ips), 2)
+    st.info(f"IPK otomatis dihitung: {ipk}")
 
     submit = st.form_submit_button("Prediksi")
 
 if submit:
-    # Encode input kategorikal
+    # Encode kategorikal
     input_data = {
         'JENIS KELAMIN': encoders['JENIS KELAMIN'].transform([jenis_kelamin])[0],
         'STATUS MAHASISWA': encoders['STATUS MAHASISWA'].transform([status_mahasiswa])[0],
-        'STATUS NIKAH': encoders['STATUS NIKAH'].transform([status_nikah])[0],
         'UMUR': umur,
-        'IPS 1': ips1,
-        'IPS 2': ips2,
-        'IPS 3': ips3,
-        'IPS 4': ips4,
-        'IPS 5': ips5,
-        'IPS 6': ips6,
-        'IPS 7': ips7,
-        'IPS 8': ips8,
-        'IPK ': ipk
+        'STATUS NIKAH': encoders['STATUS NIKAH'].transform([status_nikah])[0],
+        'IPS 1': ips[0],
+        'IPS 2': ips[1],
+        'IPS 3': ips[2],
+        'IPS 4': ips[3],
+        'IPS 5': ips[4],
+        'IPS 6': ips[5],
+        'IPS 7': ips[6],
+        'IPS 8': ips[7],
+        'IPK': ipk
     }
 
-    # Pastikan urutan kolom sesuai saat training
+    # Pastikan urutan dan nama kolom sesuai saat training
     df_input = pd.DataFrame([input_data])
+    df_input = df_input[fitur_model]
+
+    # Prediksi
     pred = model.predict(df_input)[0]
     hasil = encoders['STATUS KELULUSAN'].inverse_transform([pred])[0]
 
