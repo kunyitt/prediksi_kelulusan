@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import joblib
+import numpy as np
 
 # Load model dan encoders
 model = joblib.load('model_kelulusan.pkl')
@@ -26,9 +27,10 @@ with st.form("form_prediksi"):
     ips6 = st.number_input("IPS 6", min_value=0.0, max_value=4.0, step=0.01)
     ips7 = st.number_input("IPS 7", min_value=0.0, max_value=4.0, step=0.01)
     ips8 = st.number_input("IPS 8", min_value=0.0, max_value=4.0, step=0.01)
-
-    # Input IPK
-    ipk = st.number_input("IPK", min_value=0.0, max_value=4.0, step=0.01)
+    
+    # Hitung IPK dari IPS 1-8
+    ipk = round(np.mean([ips1, ips2, ips3, ips4, ips5, ips6, ips7, ips8]), 2)
+    st.info(f"IPK secara otomatis dihitung: {ipk}")
 
     submit = st.form_submit_button("Prediksi")
 
