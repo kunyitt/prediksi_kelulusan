@@ -28,13 +28,18 @@ with st.form("form_kelulusan"):
 if submit:
     try:
         input_df = pd.DataFrame([[
-            encoders['JENIS KELAMIN'].transform([jk])[0],
-            encoders['STATUS MAHASISWA'].transform([status_mhs])[0],
-            umur,
-            encoders['STATUS NIKAH'].transform([status_nikah])[0],
-            *ips_values,
-            ipk
-        ]], columns=input_columns)
+    encoders['JENIS KELAMIN'].transform([jk])[0],
+    encoders['STATUS MAHASISWA'].transform([status_mhs])[0],
+    umur,
+    encoders['STATUS NIKAH'].transform([status_nikah])[0],
+    *ips_values,
+    ipk
+]], columns=[
+    'JENIS KELAMIN', 'STATUS MAHASISWA', 'UMUR', 'STATUS NIKAH',
+    'IPS 1', 'IPS 2', 'IPS 3', 'IPS 4',
+    'IPS 5', 'IPS 6', 'IPS 7', 'IPS 8', 'IPK'
+])
+
 
         # Debug
         st.write("🧪 Shape input:", input_df.shape)
