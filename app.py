@@ -3,8 +3,8 @@ import pandas as pd
 import joblib
 
 # Load model & encoder
-model = joblib.load("prediksi_kelulusan.pkl")
-encoders = joblib.load("encoders.pkl")
+model = joblib.load("prediksi_kelulusan.joblib")
+encoders = joblib.load("encoders.joblib")
 
 # Kolom input yang digunakan model
 input_columns = [
