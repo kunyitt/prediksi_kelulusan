@@ -47,6 +47,11 @@ if submit:
     }
 
     df_input = pd.DataFrame([input_data])
+    
+    # Pastikan kolom sesuai urutan saat training
+    expected_cols = model.feature_names_in_  # properti dari sklearn >= 1.0
+    df_input = df_input[expected_cols]
+    
     pred = model.predict(df_input)[0]
     label_prediksi = encoders['STATUS KELULUSAN'].inverse_transform([pred])[0]
 
