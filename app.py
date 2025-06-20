@@ -5,7 +5,13 @@ import joblib
 
 # Load model dan encoders
 model = joblib.load("prediksi_kelulusan.pkl")
-encoders = joblib.load("encoders.pkl") 
+encoders = joblib.load("encoders.pkl")
+
+# Kolom input model (manual, hindari error feature_names_in_)
+input_columns = [
+    'JENIS KELAMIN', 'STATUS MAHASISWA', 'UMUR', 'STATUS NIKAH',
+    'IPS 1', 'IPS 2', 'IPS 3', 'IPS 4', 'IPS 5', 'IPS 6', 'IPS 7', 'IPS 8', 'IPK'
+]
 
 # UI
 st.title("🎓 Prediksi Kelulusan Mahasiswa")
@@ -29,7 +35,7 @@ if submit:
         encoders['STATUS NIKAH'].transform([status_nikah])[0],
         *ips_values,
         ipk
-    ]], columns=model.feature_names_in_)
+    ]], columns=input_columns)
 
     pred = model.predict(input_df)[0]
     hasil = encoders['STATUS KELULUSAN'].inverse_transform([pred])[0]
