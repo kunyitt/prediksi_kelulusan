@@ -43,18 +43,18 @@ with st.form("form_input"):
         umur = st.number_input("Umur", min_value=17, max_value=60, value=22)
 
     st.subheader("IP Semester")
-ips_values = []
-ips_cols = st.columns(8)
-for i in range(8):
-    with ips_cols[i]:
-        ips = st.number_input(f"IPS {i+1}", 0.0, 4.0, 3.0, 0.01, key=f"ips_{i}")
-        ips_values.append(ips)
+    ips_values = []
+    ips_cols = st.columns(8)
+    for i in range(8):
+        with ips_cols[i]:
+            ips = st.number_input(f"IPS {i+1}", 0.0, 4.0, 3.0, 0.01, key=f"ips_{i}")
+            ips_values.append(ips)
 
-# ✅ Hitung IPK otomatis dari rata-rata IPS 1-8
-ipk = round(np.mean(ips_values), 2)
-st.info(f"🎓 IPK dihitung otomatis: {ipk}")
+    # ✅ Hitung IPK otomatis dari IPS
+    ipk = round(np.mean(ips_values), 2)
+    st.info(f"🎓 IPK dihitung otomatis: {ipk}")
 
-
+    # ✅ Tombol submit ada di level indentasi ini
     submit = st.form_submit_button("Prediksi")
 
 # --- Prediksi ---
