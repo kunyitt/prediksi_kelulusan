@@ -23,7 +23,7 @@ def load_model():
                 'JENIS KELAMIN', 'STATUS MAHASISWA', 'UMUR', 'STATUS NIKAH',
                 'IPS 1', 'IPS 2', 'IPS 3', 'IPS 4',
                 'IPS 5', 'IPS 6', 'IPS 7', 'IPS 8',
-                'IPK'  # Tanpa spasi
+                'IPK '  # Tanpa spasi
             ]
         
         return model, required_features
