@@ -14,7 +14,10 @@ with st.form("form_prediksi"):
     status_mahasiswa = st.selectbox("Status Mahasiswa", encoders['STATUS MAHASISWA'].classes_)
     status_nikah = st.selectbox("Status Nikah", encoders['STATUS NIKAH'].classes_)
 
-    # Input IPS 1-8
+    # Input umur
+    umur = st.number_input("Umur", min_value=15, max_value=100)
+
+    # Input IPS 1 - 8
     ips1 = st.number_input("IPS 1", min_value=0.0, max_value=4.0, step=0.01)
     ips2 = st.number_input("IPS 2", min_value=0.0, max_value=4.0, step=0.01)
     ips3 = st.number_input("IPS 3", min_value=0.0, max_value=4.0, step=0.01)
@@ -32,30 +35,24 @@ with st.form("form_prediksi"):
 if submit:
     # Encode input kategorikal
     input_data = {
-    'JENIS_KELAMIN': encoders['JENIS KELAMIN'].transform([jenis_kelamin])[0],
-    'STATUS_MAHASISWA': encoders['STATUS MAHASISWA'].transform([status_mahasiswa])[0],
-    'STATUS_NIKAH': encoders['STATUS NIKAH'].transform([status_nikah])[0],
-    'IPS_1': ips1,
-    'IPS_2': ips2,
-    'IPS_3': ips3,
-    'IPS_4': ips4,
-    'IPS_5': ips5,
-    'IPS_6': ips6,
-    'IPS_7': ips7,
-    'IPS_8': ips8,
-    'IPK': ipk
-}
+        'JENIS KELAMIN': encoders['JENIS KELAMIN'].transform([jenis_kelamin])[0],
+        'STATUS MAHASISWA': encoders['STATUS MAHASISWA'].transform([status_mahasiswa])[0],
+        'STATUS NIKAH': encoders['STATUS NIKAH'].transform([status_nikah])[0],
+        'UMUR': umur,
+        'IPS 1': ips1,
+        'IPS 2': ips2,
+        'IPS 3': ips3,
+        'IPS 4': ips4,
+        'IPS 5': ips5,
+        'IPS 6': ips6,
+        'IPS 7': ips7,
+        'IPS 8': ips8,
+        'IPK': ipk
+    }
 
+    # Pastikan urutan kolom sesuai saat training
     df_input = pd.DataFrame([input_data])
-    
-    # Pastikan kolom sesuai urutan saat training
-    expected_cols = model.feature_names_in_  # properti dari sklearn >= 1.0
-    df_input = df_input[expected_cols]
-    
     pred = model.predict(df_input)[0]
-    label_prediksi = encoders['STATUS KELULUSAN'].inverse_transform([pred])[0]
+    hasil = encoders['STATUS KELULUSAN'].inverse_transform([pred])[0]
 
-    st.success(f"Hasil Prediksi: Mahasiswa diperkirakan akan **{label_prediksi.upper()}**")
-
-print("Input cols:", df_input.columns.tolist())
-print("Expected cols:", model.feature_names_in_.tolist())
+    st.success(f"Hasil Prediksi: Mahasiswa diperkirakan akan **{hasil.upper()}**")
