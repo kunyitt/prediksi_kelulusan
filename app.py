@@ -14,7 +14,7 @@ with st.form("form_prediksi"):
     # Input fitur kategorikal
     jenis_kelamin = st.selectbox("Jenis Kelamin", encoders['JENIS KELAMIN'].classes_)
     status_mahasiswa = st.selectbox("Status Mahasiswa", encoders['STATUS MAHASISWA'].classes_)
-    status_nikah = st.selectbox("Status Nikikah", encoders['STATUS NIKAH'].classes_)
+    status_nikah = st.selectbox("Status Nikah", encoders['STATUS NIKAH'].classes_)
 
     # Input umur
     umur = st.number_input("Umur", min_value=15, max_value=100)
@@ -49,16 +49,23 @@ if submit:
         'IPK': ipk
     }
 
-    # Pastikan urutan dan nama kolom sesuai saat training
+    # Buat DataFrame dari input
     df_input = pd.DataFrame([input_data])
-    df_input = df_input[fitur_model]
 
-    # Prediksi
-    pred = model.predict(df_input)[0]
-    hasil = encoders['STATUS KELULUSAN'].inverse_transform([pred])[0]
+    # Bersihkan spasi pada nama kolom input & fitur_model
+    df_input.columns = df_input.columns.str.strip()
+    fitur_model = [col.strip() for col in fitur_model]
 
-    st.success(f"Hasil Prediksi: Mahasiswa diperkirakan akan **{hasil.upper()}**")
+    # Pastikan urutan dan nama kolom cocok dengan saat training
+    try:
+        df_input = df_input[fitur_model]
 
-    print("Kolom df_input:", df_input.columns.tolist())
-    print("Kolom fitur_model:", fitur_model)
+        # Prediksi
+        pred = model.predict(df_input)[0]
+        hasil = encoders['STATUS KELULUSAN'].inverse_transform([pred])[0]
 
+        st.success(f"Hasil Prediksi: Mahasiswa diperkirakan akan **{hasil.upper()}**")
+    except KeyError as e:
+        st.error(f"Terjadi error karena kolom tidak cocok: {e}")
+        st.write("Kolom input saat ini:", df_input.columns.tolist())
+        st.write("Kolom yang dibutuhkan model:", fitur_model)
