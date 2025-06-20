@@ -51,16 +51,16 @@ if submit:
 
     # Buat DataFrame dari input
     df_input = pd.DataFrame([input_data])
-    
+
     # Bersihkan spasi pada nama kolom input & fitur_model
     df_input.columns = df_input.columns.str.strip()
     fitur_model = [col.strip() for col in fitur_model]
-    
-    # Pastikan urutan dan nama kolom cocok dengan saat training
-        try:
+
+    try:
+        # Susun ulang kolom sesuai urutan fitur model
         df_input = df_input[fitur_model]
 
-        # Gunakan .to_numpy() agar aman dari error _check_feature_names
+        # Gunakan .to_numpy() agar bebas error kolom saat prediksi
         input_array = df_input.to_numpy()
 
         # Prediksi label dan probabilitas
@@ -77,8 +77,6 @@ if submit:
             st.write(f"- {label}: {round(prob[i]*100, 2)}%")
 
     except KeyError as e:
-        st.error(f"Terjadi error karena kolom tidak cocok: {e}")
-        st.write("Kolom input saat ini:", df_input.columns.tolist())
-        st.write("Kolom yang dibutuhkan model:", fitur_model)
-
-
+        st.error(f"❌ Kolom input tidak cocok dengan model: {e}")
+        st.write("Kolom input:", df_input.columns.tolist())
+        st.write("Kolom yang diminta model:", fitur_model)
