@@ -49,7 +49,7 @@ if submit:
         'IPS 6': ips6,
         'IPS 7': ips7,
         'IPS 8': ips8,
-        'IPK': ipk
+        'IPK ': ipk
     }
 
     # Pastikan urutan kolom sesuai saat training
