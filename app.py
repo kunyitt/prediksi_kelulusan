@@ -1,145 +1,129 @@
 import streamlit as st
 import pandas as pd
 import joblib
-import numpy as np
 from sklearn.preprocessing import LabelEncoder
 
 # Konfigurasi tampilan
 st.set_page_config(page_title="Prediksi Kelulusan Mahasiswa", layout="centered")
 
 # Judul Aplikasi
-st.title("🎓 Prediksi Kelulusan Mahasiswa")
-st.write("Masukkan data mahasiswa untuk memprediksi status kelulusan")
+st.markdown("# Prediksi Kelulusan Mahasiswa")
+st.markdown("Masukkan data mahasiswa untuk memprediksi apakah akan **Tepat** atau **Terlambat** lulus.")
 
-# 1. Load Model dan Encoder dengan mapping yang benar
+# Load Model dan Encoder
 @st.cache_resource
 def load_artifacts():
     try:
         model = joblib.load('prediksi_kelulusan.joblib')
         encoders = joblib.load('encoders.joblib')
-        
-        # Reverse mapping untuk LabelEncoder
-        encoder_mappings = {}
-        for col in encoders:
-            if hasattr(encoders[col], 'classes_'):
-                encoder_mappings[col] = {
-                    'classes': encoders[col].classes_.tolist(),
-                    'inverse_mapping': {i: label for i, label in enumerate(encoders[col].classes_)}
-                }
-        
-        return model, encoders, encoder_mappings
+        return model, encoders
     except Exception as e:
-        st.error(f"Gagal memuat model: {str(e)}")
-        return None, None, None
+        st.error(f"Error loading model: {str(e)}")
+        return None, None
 
-model, encoders, encoder_mappings = load_artifacts()
+model, encoders = load_artifacts()
 
-if model is None:
+if model is None or encoders is None:
     st.stop()
 
-# 2. Input Data dengan format yang sesuai
+# Input Data
 with st.form("input_form"):
-    st.header("Data Mahasiswa")
+    st.markdown("---")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        # Jenis Kelamin (sesuaikan dengan mapping encoder)
-        st.subheader("Jenis Kelamin")
-        jk_mapping = {
-            "Laki-laki (0)": 0,
-            "Perempuan (1)": 1
-        }
+        st.markdown("### Jenis Kelamin")
         jenis_kelamin = st.radio(
-            "Pilih:",
-            list(jk_mapping.keys()),
+            "Pilih jenis kelamin",
+            ["LAKI-LAKI", "PEREMPUAN"],
             index=0
         )
-        jk_value = jk_mapping[jenis_kelamin]
         
-        # Status Mahasiswa
-        st.subheader("Status Mahasiswa")
-        status_mapping = {
-            "Aktif (0)": 0,
-            "Non-Aktif (1)": 1
-        }
-        status_mhs = st.radio(
-            "Pilih:",
-            list(status_mapping.keys()),
+        st.markdown("### Status Mahasiswa")
+        status_mahasiswa = st.radio(
+            "Pilih status",
+            ["BEKERJA", "TIDAK BEKERJA"],
             index=0
         )
-        status_value = status_mapping[status_mhs]
+        
+        st.markdown("### Status Nikah")
+        status_nikah = st.radio(
+            "Pilih status",
+            ["BELUM MENIKAH", "MENIKAH"],
+            index=0
+        )
         
     with col2:
-        # Status Nikah
-        st.subheader("Status Nikah")
-        nikah_mapping = {
-            "Belum Menikah (0)": 0,
-            "Menikah (1)": 1
-        }
-        status_nikah = st.radio(
-            "Pilih:",
-            list(nikah_mapping.keys()),
-            index=0
-        )
-        nikah_value = nikah_mapping[status_nikah]
+        st.markdown("### Umur")
+        umur = st.number_input("Masukkan umur", min_value=17, max_value=50, value=22)
         
-        # Input numerik
-        st.subheader("IPK")
-        ipk = st.slider("Pilih IPK", 0.0, 4.0, 3.0, 0.01)
+        st.markdown("### IP Semester")
+        ips_values = []
+        cols = st.columns(8)
+        for i in range(8):
+            with cols[i]:
+                ips = st.number_input(
+                    f"IPS.{i+1}",
+                    min_value=0.0,
+                    max_value=4.0,
+                    value=3.0,
+                    step=0.01,
+                    key=f"ips_{i}"
+                )
+                ips_values.append(ips)
         
-    submitted = st.form_submit_button("Prediksi")
+        st.markdown("### IPK")
+        ipk = st.number_input("Masukkan IPK", min_value=0.0, max_value=4.0, value=3.0, step=0.01)
+    
+    st.markdown("---")
+    submit_button = st.form_submit_button("PREDIKSI")
 
-# 3. Proses Prediksi
-if submitted:
+if submit_button:
     try:
-        # Membuat DataFrame input
-        input_data = {
-            'JENIS KELAMIN': [jk_value],
-            'STATUS MAHASISWA': [status_value],
-            'STATUS NIKAH': [nikah_value],
-            'IPK': [ipk]
-            # Tambahkan kolom lain sesuai kebutuhan
+        # Mapping nilai input ke format yang sesuai dengan training data
+        input_mapping = {
+            'JENIS KELAMIN': jenis_kelamin.lower(),
+            'STATUS MAHASISWA': status_mahasiswa.lower(),
+            'STATUS NIKAH': status_nikah.lower(),
+            'UMUR': umur,
+            'IPK': ipk,
+            **{f'IPS.{i+1}': ips_values[i] for i in range(8)}
         }
         
-        df_input = pd.DataFrame(input_data)
+        # Convert ke DataFrame
+        input_df = pd.DataFrame([input_mapping])
+        
+        # Transformasi data
+        for col in encoders:
+            if col in input_df.columns:
+                # Pastikan nilai ada dalam kelas encoder
+                unique_values = set(input_df[col].unique())
+                valid_values = set(encoders[col].classes_)
+                
+                if not unique_values.issubset(valid_values):
+                    invalid_values = unique_values - valid_values
+                    raise ValueError(
+                        f"Nilai {invalid_values} tidak valid untuk kolom {col}. "
+                        f"Nilai yang valid: {list(valid_values)}"
+                    )
+                
+                input_df[col] = encoders[col].transform(input_df[col])
         
         # Prediksi
-        prediction = model.predict(df_input)
-        proba = model.predict_proba(df_input)
+        prediction = model.predict(input_df)
+        prediction_proba = model.predict_proba(input_df)
         
         # Tampilkan hasil
-        st.success("### Hasil Prediksi")
+        st.markdown("## Hasil Prediksi")
         
-        # Mapping hasil prediksi
-        result_mapping = {
-            0: ("Tidak Lulus", "danger"),
-            1: ("Lulus", "success")
-        }
-        
-        pred_label, pred_color = result_mapping[prediction[0]]
-        
-        st.metric(
-            label="Status Kelulusan",
-            value=pred_label,
-            delta=f"Probabilitas: {proba[0][prediction[0]]*100:.2f}%"
-        )
-        
-        # Tampilkan probabilitas
-        st.write("Detail Probabilitas:")
-        proba_df = pd.DataFrame({
-            'Kelas': ['Tidak Lulus', 'Lulus'],
-            'Probabilitas': [proba[0][0], proba[0][1]]
-        })
-        st.bar_chart(proba_df.set_index('Kelas'))
-        
+        # Pastikan mapping prediksi sesuai dengan model
+        # (0 = Terlambat, 1 = Tepat) - sesuaikan dengan model Anda
+        if prediction[0] == 1:
+            st.success(f"### Prediksi: TEPAT LULUS (Probabilitas: {prediction_proba[0][1]*100:.2f}%)")
+        else:
+            st.error(f"### Prediksi: TERLAMBAT LULUS (Probabilitas: {prediction_proba[0][0]*100:.2f}%)")
+            
     except Exception as e:
-        st.error(f"Terjadi kesalahan: {str(e)}")
-        st.info("Pastikan semua input sudah sesuai")
-
-# Informasi tambahan
-st.sidebar.info(
-    "Pastikan input sesuai dengan format data training:\n"
-    f"Jenis Kelamin: {encoder_mappings.get('JENIS KELAMIN', {}).get('classes', 'N/A')}\n"
-    f"Status Mahasiswa: {encoder_mappings.get('STATUS MAHASISWA', {}).get('classes', 'N/A')}"
-)
+        st.error(f"Terjadi error dalam pemrosesan: {str(e)}")
+        st.info("Pastikan semua input sesuai dengan format data training")
