@@ -59,6 +59,6 @@ if submit:
 
     st.success(f"Hasil Prediksi: Mahasiswa diperkirakan akan **{hasil.upper()}**")
 
-print("Kolom df_input:", df_input.columns.tolist())
-print("Kolom fitur_model:", fitur_model)
+    print("Kolom df_input:", df_input.columns.tolist())
+    print("Kolom fitur_model:", fitur_model)
 
