@@ -5,7 +5,7 @@ import joblib
 
 # Load model dan encoders
 model = joblib.load("prediksi_kelulusan.pkl")
-encoders = joblib.load("encoders.pkl")  # Pastikan ini dictionary!
+encoders = joblib.load("encoders.pkl") 
 
 # UI
 st.title("🎓 Prediksi Kelulusan Mahasiswa")
